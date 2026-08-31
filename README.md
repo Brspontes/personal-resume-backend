@@ -1,13 +1,13 @@
 # Personal Resume Backend
 
-Backend API for [brianpontes.dev](https://www.brianpontes.dev) — a standalone NestJS service that handles everything the static portfolio frontend can't do on its own: authentication, and (soon) article interactions such as likes and comments.
+Backend API for [brianpontes.dev](https://www.brianpontes.dev) — a standalone NestJS service that handles everything the static portfolio frontend can't do on its own: authentication, article reactions, and (soon) comments.
 
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.18.0-339933?logo=node.js&logoColor=white)](package.json)
 [![NestJS](https://img.shields.io/badge/NestJS-10-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Prisma](https://img.shields.io/badge/Prisma-5-2D3748?logo=prisma&logoColor=white)](https://www.prisma.io)
-[![Tests](https://img.shields.io/badge/tests-56%20passing-brightgreen?logo=jest&logoColor=white)](#testing)
-[![Coverage](https://img.shields.io/badge/coverage-96%25-brightgreen)](#testing)
+[![Tests](https://img.shields.io/badge/tests-82%20passing-brightgreen?logo=jest&logoColor=white)](#testing)
+[![Coverage](https://img.shields.io/badge/coverage-97%25-brightgreen)](#testing)
 [![License](https://img.shields.io/badge/license-private-lightgrey)](#license)
 
 ## About
@@ -19,7 +19,8 @@ This backend is developed independently from the [portfolio frontend](https://ww
 - **LinkedIn login (OpenID Connect)** — visitors authenticate with their real LinkedIn identity; no passwords for this app to manage.
 - **Cookie-based sessions** — a signed JWT lives in an httpOnly, secure cookie. The frontend never touches the token directly.
 - **`returnTo` redirect** — login can be triggered from any page (e.g. an article) and the visitor lands back exactly where they started.
-- **Reusable `AuthGuard`** — future authenticated features (likes, comments) protect their routes without knowing anything about LinkedIn or JWTs.
+- **Reusable `AuthGuard`** — authenticated features (reactions, and future comments) protect their routes without knowing anything about LinkedIn or JWTs.
+- **Article reactions** — authenticated like/dislike on any article, one reaction per user per article (enforced by a DB constraint, safe under concurrent requests), with toggle-to-remove semantics and publicly readable counts.
 - **Validated configuration** — the app refuses to boot with a missing or malformed environment variable, with a descriptive error and no leaked secrets.
 - **Centralized, sanitized error handling** — no stack traces, SQL, or credentials ever reach an API response.
 - **OpenAPI documentation** — every endpoint is documented live at `/api/docs`.
@@ -62,9 +63,10 @@ This backend is developed independently from the [portfolio frontend](https://ww
 
 ```text
 src/
-├── auth/            # Session cookie, JWT, AuthGuard, LinkedIn login/callback endpoints
+├── auth/            # Session cookie, JWT, AuthGuard/OptionalAuthGuard, LinkedIn login/callback endpoints
 ├── linkedin/         # LinkedIn OIDC protocol - the only place that talks to LinkedIn's API
 ├── users/            # Application user persistence (Prisma)
+├── reactions/         # Article like/dislike reactions
 ├── health/           # GET /api/v1/health
 ├── common/filters/    # Global HTTP exception filter
 ├── config/            # Environment variable validation (Joi)
@@ -142,6 +144,9 @@ Interactive OpenAPI docs: **`/api/docs`** (also served in production).
 | `GET` | `/api/v1/auth/linkedin/callback` | Public (LinkedIn only) | Completes login, sets the session cookie, redirects back |
 | `GET` | `/api/v1/auth/me` | Session cookie | Returns the authenticated user's profile |
 | `POST` | `/api/v1/auth/logout` | Public | Clears the session cookie |
+| `POST` | `/api/v1/articles/:articleId/reactions` | Session cookie | Create, change, or (same type again) remove the caller's reaction |
+| `DELETE` | `/api/v1/articles/:articleId/reactions` | Session cookie | Remove the caller's reaction (idempotent) |
+| `GET` | `/api/v1/articles/:articleId/reactions` | Public (session optional) | Like/dislike counts + the caller's own reaction, if authenticated |
 
 ## Available Scripts
 
@@ -161,8 +166,8 @@ Interactive OpenAPI docs: **`/api/docs`** (also served in production).
 ## Testing
 
 ```text
-56 tests passing  (37 unit · 19 end-to-end)
-96.34% statement coverage · 95.83% line coverage
+82 tests passing  (51 unit · 31 end-to-end)
+97.32% statement coverage · 96.95% line coverage
 ```
 
 - **Unit tests** exercise services, guards, and utilities in isolation (Prisma and LinkedIn's OIDC client are mocked — no network calls, no real database).
@@ -191,10 +196,10 @@ Delivered so far (see [`openspec/changes/archive`](openspec/changes/archive) for
 
 - ✅ Backend foundation — NestJS, Prisma, validation, CORS, error handling, Swagger, health check
 - ✅ LinkedIn OpenID Connect authentication, cookie sessions, `returnTo`
+- ✅ Article reactions (like/dislike)
 
 Planned, each as its own spec-driven change:
 
-- ⏳ Article likes
 - ⏳ Comments and replies
 
 ## License
