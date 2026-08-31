@@ -7,6 +7,7 @@ import { envValidationSchema } from './config/env.validation';
 import { HealthModule } from './health/health.module';
 import { LinkedinModule } from './linkedin/linkedin.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { ReactionsModule } from './reactions/reactions.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -20,6 +21,7 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     LinkedinModule,
     AuthModule,
+    ReactionsModule,
   ],
   providers: [
     {
