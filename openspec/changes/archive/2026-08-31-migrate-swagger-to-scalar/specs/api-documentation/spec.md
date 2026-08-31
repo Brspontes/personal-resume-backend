@@ -1,8 +1,4 @@
-## Purpose
-
-Ensures the backend's REST API is discoverable and self-describing through published OpenAPI documentation, so frontend developers and future API consumers can explore available endpoints without reading the source code.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Swagger Documentation Endpoint
 The system SHALL publish interactive API reference documentation at `/api/docs`, rendered with Scalar's API reference UI, reflecting the currently available endpoints and their request/response schemas from the same OpenAPI document generated from the application's controllers and DTOs.

@@ -1,12 +1,12 @@
 # Personal Resume Backend
 
-Backend API for [brianpontes.dev](https://www.brianpontes.dev) — a standalone NestJS service that handles everything the static portfolio frontend can't do on its own: authentication, article reactions, and (soon) comments.
+Backend API for [brianpontes.dev](https://www.brianpontes.dev) — a standalone NestJS service that handles everything the static portfolio frontend can't do on its own: authentication, article reactions, and comments.
 
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.18.0-339933?logo=node.js&logoColor=white)](package.json)
 [![NestJS](https://img.shields.io/badge/NestJS-10-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Prisma](https://img.shields.io/badge/Prisma-5-2D3748?logo=prisma&logoColor=white)](https://www.prisma.io)
-[![Tests](https://img.shields.io/badge/tests-82%20passing-brightgreen?logo=jest&logoColor=white)](#testing)
+[![Tests](https://img.shields.io/badge/tests-119%20passing-brightgreen?logo=jest&logoColor=white)](#testing)
 [![Coverage](https://img.shields.io/badge/coverage-97%25-brightgreen)](#testing)
 [![License](https://img.shields.io/badge/license-private-lightgrey)](#license)
 
@@ -19,11 +19,12 @@ This backend is developed independently from the [portfolio frontend](https://ww
 - **LinkedIn login (OpenID Connect)** — visitors authenticate with their real LinkedIn identity; no passwords for this app to manage.
 - **Cookie-based sessions** — a signed JWT lives in an httpOnly, secure cookie. The frontend never touches the token directly.
 - **`returnTo` redirect** — login can be triggered from any page (e.g. an article) and the visitor lands back exactly where they started.
-- **Reusable `AuthGuard`** — authenticated features (reactions, and future comments) protect their routes without knowing anything about LinkedIn or JWTs.
+- **Reusable `AuthGuard`** — authenticated features (reactions, comments) protect their routes without knowing anything about LinkedIn or JWTs.
 - **Article reactions** — authenticated like/dislike on any article, one reaction per user per article (enforced by a DB constraint, safe under concurrent requests), with toggle-to-remove semantics and publicly readable counts.
+- **Article comments and replies** — authenticated comments on any article with one level of reply nesting, ownership enforcement on edit/delete, soft deletion that preserves discussion structure, and a per-comment `isOwner` flag for the caller.
 - **Validated configuration** — the app refuses to boot with a missing or malformed environment variable, with a descriptive error and no leaked secrets.
 - **Centralized, sanitized error handling** — no stack traces, SQL, or credentials ever reach an API response.
-- **OpenAPI documentation** — every endpoint is documented live at `/api/docs`.
+- **API reference documentation** — every endpoint is documented live at `/api/docs`, rendered with [Scalar](https://scalar.com)'s API reference UI from the same OpenAPI document `@nestjs/swagger` generates.
 
 ## Tech Stack
 
@@ -34,7 +35,7 @@ This backend is developed independently from the [portfolio frontend](https://ww
 | ORM / Database | Prisma + PostgreSQL ([Neon](https://neon.tech)) |
 | Auth | LinkedIn OpenID Connect (`openid-client`) + JWT sessions (`@nestjs/jwt`) |
 | Validation | `class-validator` / `class-transformer`, Joi (env config) |
-| Docs | Swagger / OpenAPI (`@nestjs/swagger`) |
+| Docs | OpenAPI generation (`@nestjs/swagger`) rendered with [Scalar](https://scalar.com) (`@scalar/nestjs-api-reference`) |
 | Testing | Jest, Supertest |
 | Deployment | [Render](https://render.com) |
 
@@ -67,6 +68,7 @@ src/
 ├── linkedin/         # LinkedIn OIDC protocol - the only place that talks to LinkedIn's API
 ├── users/            # Application user persistence (Prisma)
 ├── reactions/         # Article like/dislike reactions
+├── comments/          # Article comments and one-level replies (soft delete, ownership)
 ├── health/           # GET /api/v1/health
 ├── common/filters/    # Global HTTP exception filter
 ├── config/            # Environment variable validation (Joi)
@@ -147,6 +149,10 @@ Interactive OpenAPI docs: **`/api/docs`** (also served in production).
 | `POST` | `/api/v1/articles/:articleId/reactions` | Session cookie | Create, change, or (same type again) remove the caller's reaction |
 | `DELETE` | `/api/v1/articles/:articleId/reactions` | Session cookie | Remove the caller's reaction (idempotent) |
 | `GET` | `/api/v1/articles/:articleId/reactions` | Public (session optional) | Like/dislike counts + the caller's own reaction, if authenticated |
+| `POST` | `/api/v1/articles/:articleId/comments` | Session cookie | Create a top-level comment, or a reply via `parentCommentId` |
+| `GET` | `/api/v1/articles/:articleId/comments` | Public (session optional) | Top-level comments with replies nested underneath, author info, and `isOwner` |
+| `PATCH` | `/api/v1/comments/:commentId` | Session cookie | Edit the caller's own comment or reply |
+| `DELETE` | `/api/v1/comments/:commentId` | Session cookie | Soft-delete the caller's own comment or reply (replies are preserved) |
 
 ## Available Scripts
 
@@ -166,12 +172,12 @@ Interactive OpenAPI docs: **`/api/docs`** (also served in production).
 ## Testing
 
 ```text
-82 tests passing  (51 unit · 31 end-to-end)
-97.32% statement coverage · 96.95% line coverage
+119 tests passing  (70 unit · 49 end-to-end)
+97.76% statement coverage · 97.49% line coverage
 ```
 
 - **Unit tests** exercise services, guards, and utilities in isolation (Prisma and LinkedIn's OIDC client are mocked — no network calls, no real database).
-- **E2E tests** boot the real NestJS application (with a fake in-memory Prisma layer and a mocked LinkedIn provider) and drive it through Supertest: full login round-trips, `returnTo` handling, guarded-route access, validation, and error responses.
+- **E2E tests** boot the real NestJS application (with a fake in-memory Prisma layer and a mocked LinkedIn provider) and drive it through Supertest: full login round-trips, `returnTo` handling, guarded-route access, validation, comment/reply lifecycle, and error responses.
 - The full LinkedIn OAuth flow, cookie behavior, and Neon connectivity have also been verified manually end-to-end against the real LinkedIn API and a real deployment (see `design.md` in the archived `add-linkedin-auth` change for the two provider-specific quirks that surfaced during that verification).
 
 Run everything and get one merged coverage report:
@@ -194,13 +200,13 @@ Deployed on [Render](https://render.com) as a Web Service, database on [Neon](ht
 
 Delivered so far (see [`openspec/changes/archive`](openspec/changes/archive) for the full proposal/design/tasks of each):
 
-- ✅ Backend foundation — NestJS, Prisma, validation, CORS, error handling, Swagger, health check
+- ✅ Backend foundation — NestJS, Prisma, validation, CORS, error handling, API docs, health check
 - ✅ LinkedIn OpenID Connect authentication, cookie sessions, `returnTo`
 - ✅ Article reactions (like/dislike)
+- ✅ Article comments and replies (soft delete, ownership, one level of nesting)
+- ✅ API docs migrated from Swagger UI to Scalar's API reference UI
 
-Planned, each as its own spec-driven change:
-
-- ⏳ Comments and replies
+Nothing is currently proposed — the next change will start with its own `/opsx:propose` when there's a concrete need.
 
 ## License
 

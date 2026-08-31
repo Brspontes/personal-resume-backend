@@ -2,6 +2,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { apiReference } from '@scalar/nestjs-api-reference';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
@@ -33,7 +34,10 @@ async function bootstrap() {
     .setVersion('1.0')
     .build();
   const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api/docs', app, swaggerDocument);
+  app.use('/api/docs', apiReference({ content: swaggerDocument }));
+  app.getHttpAdapter().get('/api/docs-json', (_req, res) => {
+    res.json(swaggerDocument);
+  });
 
   const port = configService.get<number>('PORT') ?? 3000;
   await app.listen(port);
