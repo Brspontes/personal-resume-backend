@@ -5,6 +5,7 @@ describe('envValidationSchema', () => {
     PORT: '3000',
     NODE_ENV: 'development',
     DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
+    DIRECT_URL: 'postgresql://user:pass@localhost:5432/db',
     FRONTEND_URL: 'http://localhost:4200',
     LINKEDIN_CLIENT_ID: 'client-id',
     LINKEDIN_CLIENT_SECRET: 'client-secret',
@@ -53,6 +54,7 @@ describe('envValidationSchema', () => {
   });
 
   it.each([
+    'DIRECT_URL',
     'LINKEDIN_CLIENT_ID',
     'LINKEDIN_CLIENT_SECRET',
     'LINKEDIN_CALLBACK_URL',

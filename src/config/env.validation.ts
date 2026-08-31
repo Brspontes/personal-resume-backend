@@ -6,6 +6,7 @@ export const envValidationSchema = Joi.object({
     .valid('development', 'production', 'test')
     .default('development'),
   DATABASE_URL: Joi.string().uri().required(),
+  DIRECT_URL: Joi.string().uri().required(),
   FRONTEND_URL: Joi.string().uri().required(),
   LINKEDIN_CLIENT_ID: Joi.string().required(),
   LINKEDIN_CLIENT_SECRET: Joi.string().required(),
