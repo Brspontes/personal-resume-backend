@@ -1,0 +1,16 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Prisma Client cannot be generated with zero models. This model exists only
+// to make client generation and migrations possible before any real business
+// domain is introduced; remove it once the first feature module adds its own models.
+model Ping {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+}
