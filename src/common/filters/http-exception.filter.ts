@@ -25,15 +25,21 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
 
     const isHttpException = exception instanceof HttpException;
+    const expressClientErrorStatus = isHttpException
+      ? undefined
+      : this.extractExpressClientErrorStatus(exception);
+
     const status = isHttpException
       ? exception.getStatus()
-      : HttpStatus.INTERNAL_SERVER_ERROR;
+      : (expressClientErrorStatus ?? HttpStatus.INTERNAL_SERVER_ERROR);
 
     const message = isHttpException
       ? this.extractMessage(exception)
-      : 'Internal server error';
+      : expressClientErrorStatus
+        ? (exception as Error).message
+        : 'Internal server error';
 
-    if (!isHttpException) {
+    if (!isHttpException && !expressClientErrorStatus) {
       this.logger.error(
         exception instanceof Error ? exception.message : 'Unknown error',
         exception instanceof Error ? exception.stack : undefined,
@@ -57,5 +63,20 @@ export class HttpExceptionFilter implements ExceptionFilter {
     }
     const message = (response as { message?: string | string[] }).message;
     return message ?? exception.message;
+  }
+
+  // Express-level middleware (body-parser, etc.) throws plain `http-errors`
+  // instances with a numeric `status`, not a NestJS HttpException.
+  private extractExpressClientErrorStatus(
+    exception: unknown,
+  ): number | undefined {
+    if (typeof exception !== 'object' || exception === null) {
+      return undefined;
+    }
+    const status = (exception as { status?: unknown }).status;
+    if (typeof status === 'number' && status >= 400 && status < 500) {
+      return status;
+    }
+    return undefined;
   }
 }

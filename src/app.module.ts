@@ -1,6 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER } from '@nestjs/core';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { AuthModule } from './auth/auth.module';
 import { CommentsModule } from './comments/comments.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -25,6 +26,7 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     ReactionsModule,
     CommentsModule,
+    AnalyticsModule,
   ],
   providers: [
     {

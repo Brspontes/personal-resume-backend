@@ -12,4 +12,5 @@ export const envValidationSchema = Joi.object({
   LINKEDIN_CLIENT_SECRET: Joi.string().required(),
   LINKEDIN_CALLBACK_URL: Joi.string().uri().required(),
   AUTH_JWT_SECRET: Joi.string().min(32).required(),
+  ANALYTICS_VIEW_DEDUP_WINDOW_SECONDS: Joi.number().positive().default(1800),
 });

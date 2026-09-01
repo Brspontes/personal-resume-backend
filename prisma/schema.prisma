@@ -9,15 +9,16 @@ datasource db {
 }
 
 model User {
-  id         String     @id @default(cuid())
-  linkedinId String     @unique
-  name       String
-  avatarUrl  String?
-  email      String?
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-  reactions  Reaction[]
-  comments   Comment[]
+  id              String           @id @default(cuid())
+  linkedinId      String           @unique
+  name            String
+  avatarUrl       String?
+  email           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  reactions       Reaction[]
+  comments        Comment[]
+  analyticsEvents AnalyticsEvent[]
 }
 
 enum ReactionType {
@@ -54,4 +55,27 @@ model Comment {
 
   @@index([articleId])
   @@index([parentCommentId])
+}
+
+enum AnalyticsEventType {
+  ARTICLE_VIEW
+  ARTICLE_PROGRESS
+  ARTICLE_READ
+}
+
+model AnalyticsEvent {
+  id              String             @id @default(cuid())
+  articleId       String
+  eventType       AnalyticsEventType
+  sessionId       String
+  userId          String?
+  progress        Int?
+  durationSeconds Int?
+  maxProgress     Int?
+  metadata        Json?
+  createdAt       DateTime           @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([articleId, sessionId, eventType, createdAt])
 }
