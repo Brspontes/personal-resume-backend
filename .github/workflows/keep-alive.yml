@@ -1,0 +1,19 @@
+name: Keep API Alive
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping-health:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: |
+          response=$(curl --write-out "%{http_code}" --silent --output /dev/null https://api.brianpontes.dev/api/v1/health)
+          echo "Health endpoint responded with status $response"
+          if [ "$response" -ne 200 ]; then
+            echo "Health check failed with status $response"
+            exit 1
+          fi
